@@ -4,12 +4,69 @@
 *.dll
 *.so
 *.dylib
+calculator
+calculator.exe
 
 # Test binary, built with `go test -c`
 *.test
 
-# Output of the go coverage tool, specifically when used with LiteIDE
+# Output of the go coverage tool
 *.out
+coverage.out
+coverage.html
 
-# Dependency directories (remove the comment below to include it)
-# vendor/
+# Dependency directories
+vendor/
+
+# Go workspace file
+go.work
+
+# IDE specific files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Build output
+bin/
+build/
+dist/
+
+# Database files
+data/*.db
+data/*.db-shm
+data/*.db-wal
+!data/.gitkeep
+
+# Config files (user-specific)
+config.yaml
+*.yaml
+!config.example.yaml
+
+# Log files
+*.log
+logs/
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+
+# OS specific
+Thumbs.db
+.DS_Store
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# Documentation builds
+docs/_build/
+docs/site/
+
+# Backup files
+*.bak
+*.backup
