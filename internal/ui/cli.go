@@ -568,6 +568,8 @@ func parseAndSetSetting(setting string) error {
 	case "show-timestamps":
 		configManager.SetShowTimestamps(value == "true")
 		return nil
+	case "theme":
+		return configManager.SetTheme(value)
 	default:
 		return fmt.Errorf("unknown setting: %s", key)
 	}
@@ -579,12 +581,13 @@ func printSettings() {
 
 	fmt.Println("\nCurrent Settings:")
 	fmt.Println(strings.Repeat("=", 50))
-	fmt.Printf("  Mode:           %v\n", cfg["mode"])
-	fmt.Printf("  Angle Unit:     %v\n", cfg["angle_unit"])
-	fmt.Printf("  Decimal Places: %v\n", cfg["decimal_places"])
-	fmt.Printf("  History Limit:  %v\n", cfg["history_limit"])
-	fmt.Printf("  Auto Save:      %v\n", cfg["auto_save"])
-	fmt.Printf("  Show Timestamps:%v\n", cfg["show_timestamps"])
+	fmt.Printf("  Mode:            %v\n", cfg["mode"])
+	fmt.Printf("  Angle Unit:      %v\n", cfg["angle_unit"])
+	fmt.Printf("  Decimal Places:  %v\n", cfg["decimal_places"])
+	fmt.Printf("  History Limit:   %v\n", cfg["history_limit"])
+	fmt.Printf("  Auto Save:       %v\n", cfg["auto_save"])
+	fmt.Printf("  Show Timestamps: %v\n", cfg["show_timestamps"])
+	fmt.Printf("  Theme:           %v\n", cfg["theme"])
 	fmt.Println(strings.Repeat("=", 50))
 	fmt.Println()
 }

@@ -69,20 +69,84 @@ go build -o calculator.exe ./cmd/calculator
 # Copy calculator.exe to directory in PATH
 ```
 
-### Install on Linux/macOS
-
+### Build for macOS
 ```bash
-# Build for Linux
-GOOS=linux GOARCH=amd64 go build -o calculator ./cmd/calculator
+# macOS requires a macOS machine or cross-compilation toolchain
+GOSO=darwin GOARCH=amd64 CGO_ENABLED=1 go build -o calculator-darwin ./cmd/calculator
+```
 
-# Build for macOS
-GOOS=darwin GOARCH=amd64 go build -o calculator ./cmd/calculator
+### Pre-built Binaries
 
-# Make executable
-chmod +x calculator
+Pre-built binaries are available for Linux and Windows:
 
-# Move to /usr/local/bin (optional)
-sudo mv calculator /usr/local/bin/
+| Platform | Architecture | Binary |
+|----------|-------------|--------|
+| Linux    | amd64       | `calculator-linux-amd64` |
+| Windows  | amd64       | `calculator-windows-amd64.exe` |
+| macOS    | amd64       | Build from source (see above) |
+
+## Troubleshooting
+
+### Common Issues
+
+#### "cannot find package" or build errors
+
+Ensure you have the correct module path and dependencies:
+```bash
+go mod tidy
+go mod download
+```
+
+#### CGO/SQLite errors on Linux
+
+Install GCC and SQLite development headers:
+```bash
+# Ubuntu/Debian
+sudo apt-get install gcc libsqlite3-dev
+
+# Fedora/RHEL
+sudo dnf install gcc sqlite-devel
+```
+
+#### Windows: "gcc: error: unrecognized command-line option '-mthreads'"
+
+This error occurs when cross-compiling for Windows on Linux. Install the MinGW cross-compiler:
+```bash
+sudo apt-get install gcc-mingw-w64-x86-64
+```
+
+Then build with:
+```bash
+CGO_ENABLED=1 GOOS=windows GOARCH=amd64 CC=x86_64-w64-mingw32-gcc go build -o calculator.exe ./cmd/calculator
+```
+
+#### Database connection errors
+
+If you see "database connection not established":
+1. Ensure the data directory is writable
+2. Check if SQLite library is installed
+3. Try clearing the database file (deletes history):
+   ```bash
+   rm ~/.config/calculator/calculator.db
+   ```
+
+#### Settings not saving
+
+The config file is saved to:
+- Linux: `~/.config/calculator/config.yaml`
+- Windows: `%APPDATA%\calculator\config.yaml`
+
+Ensure the directory exists and is writable. Use `calc config path` to check the location.
+
+#### "command not found" after installation
+
+Ensure the binary is in your PATH:
+```bash
+# Linux/macOS
+sudo cp calculator /usr/local/bin/
+
+# Windows (PowerShell as Administrator)
+move calculator.exe C:\Windows\System32\
 ```
 
 ## Usage
