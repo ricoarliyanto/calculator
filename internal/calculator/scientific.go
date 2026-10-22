@@ -1,28 +1,15 @@
 package calculator
 
 import (
-	"errors"
 	"math"
 )
 
 // Scientific calculator operations
 
-// ErrDomainError is returned for domain errors (e.g., sqrt of negative)
-var ErrDomainError = errors.New("domain error")
-
-// ErrInvalidInput is returned for invalid input
-var ErrInvalidInput = errors.New("invalid input")
-
 // Trigonometric constants
 const (
 	DegToRad = math.Pi / 180
 	RadToDeg = 180 / math.Pi
-)
-
-// Mathematical constants
-const (
-	Pi = math.Pi
-	E  = math.E
 )
 
 // Sin calculates sine of an angle
@@ -120,11 +107,11 @@ func Factorial(n int64) (float64, error) {
 		// 21! overflows float64
 		return 0, ErrInvalidInput
 	}
-	
+
 	if n == 0 || n == 1 {
 		return 1, nil
 	}
-	
+
 	result := float64(1)
 	for i := int64(2); i <= n; i++ {
 		result *= float64(i)

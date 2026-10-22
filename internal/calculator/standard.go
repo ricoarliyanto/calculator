@@ -1,14 +1,6 @@
 package calculator
 
-import (
-	"errors"
-	"math"
-)
-
 // Standard calculator operations
-
-// ErrDivisionByZero is returned when attempting to divide by zero
-var ErrDivisionByZero = errors.New("division by zero")
 
 // Add performs addition
 func Add(a, b float64) (float64, error) {

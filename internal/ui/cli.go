@@ -174,7 +174,7 @@ func startInteractiveMode() {
 	fmt.Printf("Type 'help' for available commands, 'quit' or 'exit' to quit\n\n")
 
 	scanner := bufio.NewScanner(os.Stdin)
-	
+
 	for {
 		fmt.Printf(">>> ")
 		if !scanner.Scan() {
@@ -184,7 +184,7 @@ func startInteractiveMode() {
 		}
 
 		input := strings.TrimSpace(scanner.Text())
-		
+
 		// Skip empty input
 		if input == "" {
 			continue
@@ -224,7 +224,7 @@ func startInteractiveMode() {
 			continue
 
 		case "undo":
-			if len(currentCalc.(*currentCalc).undoStack) > 0 {
+			if currentCalc.CanUndo() {
 				currentCalc.Undo()
 				fmt.Printf("Undo: %v\n", currentCalc.GetCurrentResult())
 			} else {
@@ -283,7 +283,7 @@ func startInteractiveMode() {
 		}
 
 		// Save to history
-		_, err = historyManager.AddCalculation(input, fmt.Sprintf("%v", result), calculator.Mode(currentCalc.GetMode()))
+		_, err = historyManager.AddCalculation(input, fmt.Sprintf("%v", result), database.CalculationMode(currentCalc.GetMode()))
 		if err != nil {
 			// Non-fatal, just log
 			fmt.Printf("Warning: failed to save to history: %v\n", err)
@@ -295,8 +295,7 @@ func startInteractiveMode() {
 
 // printInteractiveHelp prints help for interactive mode
 func printInteractiveHelp() {
-	fmt.Println(`
-Interactive Calculator Commands:
+	fmt.Print(`Interactive Calculator Commands:
 
 Calculator Operations:
   Enter any mathematical expression to evaluate it
@@ -341,7 +340,7 @@ func printHistory() {
 
 	fmt.Printf("\nCalculation History (last %d):\n", len(history))
 	fmt.Println(strings.Repeat("=", 60))
-	
+
 	for i, calc := range history {
 		fmt.Printf("%d. [%s] %s = %s\n", i+1, calc.Mode, calc.Expression, calc.Result)
 	}
@@ -372,7 +371,7 @@ Examples:
 			filter, _ := cmd.Flags().GetString("filter")
 			exportFormat, _ := cmd.Flags().GetString("export")
 			clear, _ := cmd.Flags().GetBool("clear")
-			
+
 			if clear {
 				if err := clearHistory(); err != nil {
 					fmt.Printf("Error: %v\n", err)
@@ -441,7 +440,7 @@ func viewHistory(limit int, filter string) error {
 	fmt.Println(strings.Repeat("-", 80))
 
 	for _, calc := range calculations {
-		fmt.Printf("%-5d %-12s %-40s %-20s %s\n", 
+		fmt.Printf("%-5d %-12s %-40s %-20s %s\n",
 			calc.ID, calc.Mode, calc.Expression, calc.Result, calc.CreatedAt.Format("2006-01-02 15:04:05"))
 	}
 	fmt.Println(strings.Repeat("=", 80))
@@ -564,9 +563,11 @@ func parseAndSetSetting(setting string) error {
 		}
 		return configManager.SetHistoryLimit(limit)
 	case "auto-save":
-		return configManager.SetAutoSave(value == "true")
+		configManager.SetAutoSave(value == "true")
+		return nil
 	case "show-timestamps":
-		return configManager.SetShowTimestamps(value == "true")
+		configManager.SetShowTimestamps(value == "true")
+		return nil
 	default:
 		return fmt.Errorf("unknown setting: %s", key)
 	}
@@ -575,7 +576,7 @@ func parseAndSetSetting(setting string) error {
 // printSettings prints all settings
 func printSettings() {
 	cfg := configManager.ExportConfig()
-	
+
 	fmt.Println("\nCurrent Settings:")
 	fmt.Println(strings.Repeat("=", 50))
 	fmt.Printf("  Mode:           %v\n", cfg["mode"])
@@ -591,13 +592,13 @@ func printSettings() {
 // printSetting prints a specific setting
 func printSetting(key string) {
 	cfg := configManager.ExportConfig()
-	
+
 	value, ok := cfg[key]
 	if !ok {
 		fmt.Printf("Unknown setting: %s\n", key)
 		return
 	}
-	
+
 	fmt.Printf("%s: %v\n", key, value)
 }
 

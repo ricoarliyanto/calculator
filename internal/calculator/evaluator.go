@@ -121,6 +121,16 @@ func (c *Calculator) GetCurrentResult() float64 {
 	return c.currentResult
 }
 
+// CanUndo returns true if there are operations that can be undone
+func (c *Calculator) CanUndo() bool {
+	return len(c.undoStack) > 0
+}
+
+// CanRedo returns true if there are operations that can be redone
+func (c *Calculator) CanRedo() bool {
+	return len(c.redoStack) > 0
+}
+
 // Undo undoes the last operation
 func (c *Calculator) Undo() {
 	if len(c.undoStack) > 0 {
@@ -181,6 +191,12 @@ func EvaluateWithContext(expression string, angleUnit string) (float64, error) {
 	expression = strings.ReplaceAll(expression, "π", "pi")
 	expression = strings.ReplaceAll(expression, "Π", "pi")
 
+	// Parse angle unit specifiers from function calls (e.g., sin(90,deg) -> sin(90), angleUnit="deg")
+	expression, parsedUnit := parseAngleUnitFromExpression(expression)
+	if parsedUnit != "" {
+		angleUnit = parsedUnit
+	}
+
 	// Tokenize the expression
 	tokens, err := tokenize(expression)
 	if err != nil {
@@ -189,6 +205,24 @@ func EvaluateWithContext(expression string, angleUnit string) (float64, error) {
 
 	// Parse and evaluate using Shunting Yard algorithm
 	return evaluateTokens(tokens, angleUnit)
+}
+
+// parseAngleUnitFromExpression extracts angle unit specifiers (deg/rad) from function calls
+// and removes them from the expression. Returns the modified expression and the angle unit.
+func parseAngleUnitFromExpression(expr string) (string, string) {
+	for _, unit := range []string{"deg", "rad"} {
+		pattern := "," + unit + ")"
+		for {
+			idx := strings.Index(expr, pattern)
+			if idx < 0 {
+				break
+			}
+			// Remove the ",unit" part, keeping the ")"
+			expr = expr[:idx] + expr[idx+len(pattern)-1:]
+			return expr, unit
+		}
+	}
+	return expr, ""
 }
 
 // tokenType represents the type of a token
@@ -295,7 +329,7 @@ func tokenize(expression string) ([]Token, error) {
 				i++
 				continue
 			}
-			
+
 			// Regular binary operator
 			tokens = append(tokens, Token{
 				Value: string(char),
@@ -444,14 +478,14 @@ func evaluateTokens(tokens []Token, angleUnit string) (float64, error) {
 				if top.Type != tokenOperator && top.Type != tokenFunction {
 					break
 				}
-				
+
 				shouldPop := false
 				if isRightAssociative(token.Value) {
 					shouldPop = operatorPrecedence(token.Value) < operatorPrecedence(top.Value)
 				} else {
 					shouldPop = operatorPrecedence(token.Value) <= operatorPrecedence(top.Value)
 				}
-				
+
 				if shouldPop {
 					output = append(output, top)
 					ops = ops[:len(ops)-1]

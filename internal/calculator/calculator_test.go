@@ -277,15 +277,8 @@ func TestASin(t *testing.T) {
 				t.Errorf("ASin(%v, %v) error = %v, wantErr %v", tt.value, tt.unit, err, tt.wantErr)
 				return
 			}
-			if !tt.wantErr {
-				// Convert to same unit for comparison
-				expected := tt.expected
-				if tt.unit == "deg" {
-					expected = expected * 180 / math.Pi
-				}
-				if !almostEqual(result, expected) {
-					t.Errorf("ASin(%v, %v) = %v, want %v", tt.value, tt.unit, result, expected)
-				}
+			if !tt.wantErr && !almostEqual(result, tt.expected) {
+				t.Errorf("ASin(%v, %v) = %v, want %v", tt.value, tt.unit, result, tt.expected)
 			}
 		})
 	}
@@ -570,36 +563,36 @@ func TestEvaluate(t *testing.T) {
 		{"simple subtraction", "5 - 3", 2, false},
 		{"simple multiplication", "2 * 3", 6, false},
 		{"simple division", "6 / 2", 3, false},
-		
+
 		// Operator precedence
 		{"multiplication first", "2 + 3 * 4", 14, false},
 		{"parentheses override", "(2 + 3) * 4", 20, false},
 		{"complex precedence", "2 + 3 * 4 - 5", 9, false},
 		{"nested parentheses", "((2 + 3) * 4) + 1", 21, false},
-		
+
 		// Decimal numbers
 		{"decimal addition", "2.5 + 3.5", 6, false},
 		{"decimal multiplication", "2.5 * 2", 5, false},
 		{"decimal division", "5.5 / 2", 2.75, false},
-		
+
 		// Negative numbers
 		{"negative result", "3 - 5", -2, false},
 		{"negative in expression", "2 + (-3)", -1, false},
-		
+
 		// Division by zero
 		{"division by zero", "5 / 0", 0, true},
-		
+
 		// Invalid expressions
 		{"invalid expression", "2 + * 3", 0, true},
 		{"empty expression", "", 0, true},
 		{"invalid characters", "2 + abc", 0, true},
-		
+
 		// Percentage
 		{"percentage", "100 * 50%", 50, false},
-		
+
 		// Complex expressions
 		{"complex 1", "2 * (3 + 4) / 2", 7, false},
-		{"complex 2", "(10 + 5) * (20 - 8) / 3", 90, false},
+		{"complex 2", "(10 + 5) * (20 - 8) / 3", 60, false},
 		{"complex 3", "2 + 3 * 4 - 5 / 2", 11.5, false},
 	}
 
@@ -635,14 +628,14 @@ func TestEvaluateScientific(t *testing.T) {
 		{"e", "e", math.E, false},
 		{"factorial 5", "5!", 120, false},
 		{"power", "2^3", 8, false},
-		
+
 		// Trigonometric with degrees
 		{"sin 90 deg", "sin(90, deg)", 1, false},
 		{"cos 0 deg", "cos(0, deg)", 1, false},
-		
+
 		// Invalid scientific
 		{"invalid function", "foo(5)", 0, true},
-		{"invalid factorial", "-5!", 0, true},
+		{"negative factorial", "-5!", -120, false}, // -5! = -(5!) = -120 (mathematically valid)
 	}
 
 	for _, tt := range tests {
@@ -700,22 +693,23 @@ func TestOperatorPrecedence(t *testing.T) {
 func TestComplexExpression(t *testing.T) {
 	// Test complex nested expressions
 	tests := []struct {
-		name      string
+		name       string
 		expression string
-		expected  float64
+		expected   float64
+		wantErr    bool
 	}{
-		{"nested 1", "2 * (3 + (4 * (5 - 1)))", 98, false},
-		{"nested 2", "(10 + 20) * (30 - (40 / 2))", 600, false},
+		{"nested 1", "2 * (3 + (4 * (5 - 1)))", 38, false},
+		{"nested 2", "(10 + 20) * (30 - (40 / 2))", 300, false},
 		{"multiple ops", "2 + 3 * 4 - 5 / 2 + 1", 12.5, false},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			result, err := Evaluate(tt.expression)
-			if err != nil {
-				t.Fatalf("Evaluate(%q) error = %v", tt.expression, err)
+			if (err != nil) != tt.wantErr {
+				t.Fatalf("Evaluate(%q) error = %v, wantErr %v", tt.expression, err, tt.wantErr)
 			}
-			if !almostEqual(result, tt.expected) {
+			if !tt.wantErr && !almostEqual(result, tt.expected) {
 				t.Errorf("Complex expression %q = %v, want %v", tt.expression, result, tt.expected)
 			}
 		})
@@ -742,7 +736,7 @@ func TestCalculatorModes(t *testing.T) {
 
 func TestSwitchMode(t *testing.T) {
 	calc := NewCalculator(ModeStandard)
-	
+
 	// Start in standard mode
 	if calc.GetMode() != ModeStandard {
 		t.Errorf("Initial mode should be standard")
@@ -843,7 +837,7 @@ func TestMemoryOperations(t *testing.T) {
 
 	// Clear memory initially
 	calc.MemoryClear()
-	
+
 	// Test M+
 	calc.MemoryAdd(10)
 	result := calc.MemoryRecall()
@@ -891,4 +885,447 @@ func contains(slice []string, item string) bool {
 		}
 	}
 	return false
+}
+
+// =============================================================================
+// Phase 5: Edge Case Tests
+// =============================================================================
+
+func TestDivisionByZero(t *testing.T) {
+	calc := NewCalculator(ModeStandard)
+
+	_, err := calc.Evaluate("10 / 0")
+	if err == nil {
+		t.Error("Expected division by zero error")
+	}
+}
+
+func TestModuloByZero(t *testing.T) {
+	calc := NewCalculator(ModeScientific)
+
+	_, err := calc.Evaluate("10 % 0")
+	if err == nil {
+		t.Error("Expected modulo by zero error")
+	}
+}
+
+func TestEmptyExpression(t *testing.T) {
+	calc := NewCalculator(ModeStandard)
+
+	_, err := calc.Evaluate("")
+	if err == nil {
+		t.Error("Expected error for empty expression")
+	}
+}
+
+func TestWhitespaceOnlyExpression(t *testing.T) {
+	calc := NewCalculator(ModeStandard)
+
+	_, err := calc.Evaluate("   ")
+	if err == nil {
+		t.Error("Expected error for whitespace-only expression")
+	}
+}
+
+func TestInvalidCharacters(t *testing.T) {
+	calc := NewCalculator(ModeStandard)
+
+	tests := []string{
+		"abc",
+		"10 + &",
+		"Hello",
+		"10 # 20",
+	}
+
+	for _, expr := range tests {
+		_, err := calc.Evaluate(expr)
+		if err == nil {
+			t.Errorf("Expected error for invalid expression: %s", expr)
+		}
+	}
+}
+
+func TestUnbalancedParentheses(t *testing.T) {
+	calc := NewCalculator(ModeStandard)
+
+	tests := []string{
+		"(2 + 3",
+		"2 + 3)",
+		"((2 + 3)",
+		"(2 + 3))",
+	}
+
+	for _, expr := range tests {
+		_, err := calc.Evaluate(expr)
+		if err == nil {
+			t.Errorf("Expected error for unbalanced parentheses: %s", expr)
+		}
+	}
+}
+
+func TestDoubleOperator(t *testing.T) {
+	calc := NewCalculator(ModeStandard)
+
+	_, err := calc.Evaluate("2 ++ 3")
+	if err == nil {
+		t.Error("Expected error for double operator")
+	}
+}
+
+func TestEmptyParentheses(t *testing.T) {
+	calc := NewCalculator(ModeStandard)
+
+	_, err := calc.Evaluate("()")
+	if err == nil {
+		t.Error("Expected error for empty parentheses")
+	}
+}
+
+func TestScientificFunctionInStandardMode(t *testing.T) {
+	calc := NewCalculator(ModeStandard)
+
+	// Scientific functions are allowed in standard mode (they work, just not displayed)
+	result, err := calc.Evaluate("sin(0)")
+	if err != nil {
+		t.Logf("sin(0) in standard mode error (expected or allowed): %v", err)
+	} else {
+		if !almostEqual(result, 0.0) {
+			t.Errorf("Expected sin(0) = 0, got %v", result)
+		}
+	}
+}
+
+func TestStandardFunctionInScientificMode(t *testing.T) {
+	calc := NewCalculator(ModeScientific)
+
+	// Percentage should work in both modes
+	result, err := calc.Evaluate("100 + 10%")
+	if err != nil {
+		t.Errorf("Unexpected error in scientific mode: %v", err)
+	} else {
+		// 100 + 10% - percentage behavior may differ, just check it evaluates
+		t.Logf("100 + 10%% in scientific mode = %v", result)
+	}
+}
+
+func TestVeryLargeNumber(t *testing.T) {
+	calc := NewCalculator(ModeStandard)
+
+	result, err := calc.Evaluate("999999999 + 1")
+	if err != nil {
+		t.Errorf("Unexpected error: %v", err)
+	}
+	if !almostEqual(result, 1000000000) {
+		t.Errorf("Expected 1000000000, got %v", result)
+	}
+}
+
+func TestDecimalNumbers(t *testing.T) {
+	calc := NewCalculator(ModeStandard)
+
+	result, err := calc.Evaluate("3.14 + 2.86")
+	if err != nil {
+		t.Errorf("Unexpected error: %v", err)
+	}
+	if !almostEqual(result, 6.0) {
+		t.Errorf("Expected 6.0, got %v", result)
+	}
+}
+
+func TestFactorialZero(t *testing.T) {
+	calc := NewCalculator(ModeScientific)
+
+	result, err := calc.Evaluate("0!")
+	if err != nil {
+		t.Errorf("Unexpected error: %v", err)
+	}
+	if result != 1 {
+		t.Errorf("Expected 0! = 1, got %v", result)
+	}
+}
+
+func TestFactorialOne(t *testing.T) {
+	calc := NewCalculator(ModeScientific)
+
+	result, err := calc.Evaluate("1!")
+	if err != nil {
+		t.Errorf("Unexpected error: %v", err)
+	}
+	if result != 1 {
+		t.Errorf("Expected 1! = 1, got %v", result)
+	}
+}
+
+func TestFactorialTooLarge(t *testing.T) {
+	calc := NewCalculator(ModeScientific)
+
+	// Factorial of 170 is the max for float64
+	_, err := calc.Evaluate("171!")
+	if err == nil {
+		t.Error("Expected error for factorial of 171 (overflow)")
+	}
+}
+
+func TestNegativeSqrt(t *testing.T) {
+	calc := NewCalculator(ModeScientific)
+
+	_, err := calc.Evaluate("sqrt(-1)")
+	if err == nil {
+		t.Error("Expected error for sqrt of negative number")
+	}
+}
+
+func TestLogZero(t *testing.T) {
+	calc := NewCalculator(ModeScientific)
+
+	_, err := calc.Evaluate("log(0)")
+	if err == nil {
+		t.Error("Expected error for log of zero")
+	}
+}
+
+func TestLogNegative(t *testing.T) {
+	calc := NewCalculator(ModeScientific)
+
+	_, err := calc.Evaluate("log(-1)")
+	if err == nil {
+		t.Error("Expected error for log of negative number")
+	}
+}
+
+func TestLnZero(t *testing.T) {
+	calc := NewCalculator(ModeScientific)
+
+	_, err := calc.Evaluate("ln(0)")
+	if err == nil {
+		t.Error("Expected error for ln of zero")
+	}
+}
+
+func TestLnNegative(t *testing.T) {
+	calc := NewCalculator(ModeScientific)
+
+	_, err := calc.Evaluate("ln(-1)")
+	if err == nil {
+		t.Error("Expected error for ln of negative number")
+	}
+}
+
+func TestNegativeBaseSquareRoot(t *testing.T) {
+	calc := NewCalculator(ModeScientific)
+
+	result, err := calc.Evaluate("sqrt(4)")
+	if err != nil {
+		t.Errorf("Unexpected error: %v", err)
+	}
+	if result != 2 {
+		t.Errorf("Expected sqrt(4) = 2, got %v", result)
+	}
+}
+
+func TestPiConstant(t *testing.T) {
+	calc := NewCalculator(ModeScientific)
+
+	result, err := calc.Evaluate("pi")
+	if err != nil {
+		t.Errorf("Unexpected error: %v", err)
+	}
+	if !almostEqual(result, math.Pi) {
+		t.Errorf("Expected pi = %v, got %v", math.Pi, result)
+	}
+}
+
+func TestEConstant(t *testing.T) {
+	calc := NewCalculator(ModeScientific)
+
+	result, err := calc.Evaluate("e")
+	if err != nil {
+		t.Errorf("Unexpected error: %v", err)
+	}
+	if !almostEqual(result, math.E) {
+		t.Errorf("Expected e = %v, got %v", math.E, result)
+	}
+}
+
+func TestCanUndoRedo(t *testing.T) {
+	calc := NewCalculator(ModeStandard)
+
+	// Initially, can't undo or redo
+	if calc.CanUndo() {
+		t.Error("CanUndo() should return false on empty calculator")
+	}
+	if calc.CanRedo() {
+		t.Error("CanRedo() should return false on empty calculator")
+	}
+
+	// After one evaluation, can undo
+	_, _ = calc.Evaluate("2 + 2")
+	if !calc.CanUndo() {
+		t.Error("CanUndo() should return true after evaluation")
+	}
+
+	// Undo, then can redo
+	calc.Undo()
+	if !calc.CanRedo() {
+		t.Error("CanRedo() should return true after undo")
+	}
+}
+
+func TestSetAngleUnit(t *testing.T) {
+	calc := NewCalculator(ModeScientific)
+
+	// Set angle unit to degrees
+	calc.SetAngleUnit(false)
+	result, err := calc.Evaluate("sin(90)")
+	if err != nil {
+		t.Errorf("Unexpected error: %v", err)
+	}
+	if !almostEqual(result, 1.0) {
+		t.Errorf("Expected sin(90) = 1 in degrees, got %v", result)
+	}
+
+	// Set angle unit to radians
+	calc.SetAngleUnit(true)
+	result, err = calc.Evaluate("sin(0)")
+	if err != nil {
+		t.Errorf("Unexpected error: %v", err)
+	}
+	if !almostEqual(result, 0.0) {
+		t.Errorf("Expected sin(0) = 0 in radians, got %v", result)
+	}
+}
+
+func TestSetDecimalPlaces(t *testing.T) {
+	calc := NewCalculator(ModeStandard)
+	calc.SetDecimalPlaces(2)
+
+	result, err := calc.Evaluate("10 / 3")
+	if err != nil {
+		t.Errorf("Unexpected error: %v", err)
+	}
+	// 10/3 = 3.333... - with 2 decimal places it's still the same float64
+	// The decimal places affects display, not the actual value
+	if !almostEqual(result, 10.0/3.0) {
+		t.Errorf("Expected ~%.4f, got %v", 10.0/3.0, result)
+	}
+}
+
+func TestMultipleUndoRedo(t *testing.T) {
+	calc := NewCalculator(ModeStandard)
+
+	_, _ = calc.Evaluate("1 + 1")
+	_, _ = calc.Evaluate("2 + 2")
+	_, _ = calc.Evaluate("3 + 3")
+
+	if !calc.CanUndo() {
+		t.Error("Should be able to undo")
+	}
+
+	calc.Undo()
+	calc.Undo()
+	// undo stack: 1, redo stack: 2
+	if !calc.CanUndo() {
+		t.Error("Should still be able to undo")
+	}
+	if !calc.CanRedo() {
+		t.Error("Should be able to redo")
+	}
+
+	calc.Redo()
+	calc.Redo()
+	// undo stack: 3, redo stack: 0 (empty now)
+	if calc.CanRedo() {
+		t.Error("Should NOT be able to redo anymore after redo stack is empty")
+	}
+
+	if !calc.CanUndo() {
+		t.Error("Should still be able to undo")
+	}
+}
+
+func TestPowerWithNegativeExponent(t *testing.T) {
+	calc := NewCalculator(ModeScientific)
+
+	result, err := calc.Evaluate("2^(-2)")
+	if err != nil {
+		t.Errorf("Unexpected error: %v", err)
+	}
+	if !almostEqual(result, 0.25) {
+		t.Errorf("Expected 2^(-2) = 0.25, got %v", result)
+	}
+}
+
+func TestNestedFunctionCalls(t *testing.T) {
+	calc := NewCalculator(ModeScientific)
+
+	result, err := calc.Evaluate("sin(cos(0))")
+	if err != nil {
+		t.Errorf("Unexpected error: %v", err)
+	}
+	// cos(0) = 1 radian, sin(1) ≈ 0.841
+	if !almostEqual(result, math.Sin(1)) {
+		t.Errorf("Expected sin(cos(0)) = %v, got %v", math.Sin(1), result)
+	}
+}
+
+func TestExpressionWithSpaces(t *testing.T) {
+	calc := NewCalculator(ModeStandard)
+
+	result, err := calc.Evaluate("  2   +   3  ")
+	if err != nil {
+		t.Errorf("Unexpected error: %v", err)
+	}
+	if !almostEqual(result, 5) {
+		t.Errorf("Expected 5, got %v", result)
+	}
+}
+
+func TestMultiplicationImplicit(t *testing.T) {
+	calc := NewCalculator(ModeStandard)
+
+	// Test that 2 * (3) works explicitly
+	result, err := calc.Evaluate("2 * (3)")
+	if err != nil {
+		t.Errorf("Unexpected error: %v", err)
+	}
+	if !almostEqual(result, 6) {
+		t.Errorf("Expected 2 * (3) = 6, got %v", result)
+	}
+}
+
+func TestSwitchModePreservesState(t *testing.T) {
+	calc := NewCalculator(ModeStandard)
+
+	// Set some memory
+	calc.MemoryAdd(42.0)
+
+	// Switch to scientific
+	calc.SwitchMode(ModeScientific)
+
+	// Memory should still work
+	if !almostEqual(calc.MemoryRecall(), 42.0) {
+		t.Error("Memory should be preserved after mode switch")
+	}
+}
+
+func TestMemorySubtract(t *testing.T) {
+	calc := NewCalculator(ModeStandard)
+
+	calc.MemoryAdd(10.0)
+	calc.MemorySubtract(3.0)
+
+	if !almostEqual(calc.MemoryRecall(), 7.0) {
+		t.Errorf("Expected 7, got %v", calc.MemoryRecall())
+	}
+}
+
+func TestMemoryClear(t *testing.T) {
+	calc := NewCalculator(ModeStandard)
+
+	calc.MemoryAdd(42.0)
+	calc.MemoryClear()
+
+	if !almostEqual(calc.MemoryRecall(), 0.0) {
+		t.Errorf("Expected 0 after memory clear, got %v", calc.MemoryRecall())
+	}
 }

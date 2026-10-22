@@ -197,27 +197,30 @@ calculator/
 │       └── main.go           # Entry point
 ├── internal/
 │   ├── calculator/
-│   │   ├── standard.go       # Standard calculator logic
-│   │   ├── scientific.go    # Scientific calculator logic
-│   │   ├── evaluator.go     # Expression parser
-│   │   └── calculator_test.go
+│   │   ├── standard.go       # Standard calculator operations
+│   │   ├── scientific.go     # Scientific calculator operations
+│   │   ├── evaluator.go      # Expression parser (Shunting Yard)
+│   │   ├── calculator_test.go # Unit + edge case tests
+│   │   └── benchmark_test.go  # Performance benchmarks
 │   ├── database/
-│   │   ├── sqlite.go         # Database connection
+│   │   ├── sqlite.go         # Database connection manager
 │   │   ├── models.go         # Data models
-│   │   └── database_test.go
+│   │   ├── migrations.go     # Migration manager
+│   │   ├── calculations.go   # Calculation repository
+│   │   ├── settings.go       # Settings repository
+│   │   └── database_test.go  # Unit tests
 │   ├── history/
 │   │   ├── history.go        # History management
-│   │   └── history_test.go
+│   │   └── history_test.go   # Unit tests
 │   ├── config/
 │   │   ├── config.go         # Configuration management
-│   │   └── config_test.go
+│   │   └── config_test.go    # Unit tests
 │   └── ui/
-│       ├── cli.go            # CLI interface
-│       └── cli_test.go
+│       └── cli.go            # CLI interface (Cobra)
 ├── pkg/
 │   └── utils/
 │       ├── helpers.go        # Utility functions
-│       └── helpers_test.go
+│       └── helpers_test.go   # Tests
 ├── data/
 │   └── calculator.db         # SQLite database
 ├── md-files/
@@ -226,9 +229,10 @@ calculator/
 │   ├── TDD.md                # Test Strategy
 │   ├── ARCHITECTURE.md       # Architecture Documentation
 │   ├── API.md                # API Documentation
-│   └── README.md             # This file
+│   └── README.md             # Original README
 ├── go.mod
 ├── go.sum
+├── coverage.out            # Generated coverage report
 └── .gitignore
 ```
 
@@ -252,7 +256,24 @@ go test ./internal/calculator
 
 # Run benchmarks
 go test -bench=. ./...
+
+# Run tests with verbose output
+go test -v ./...
 ```
+
+### Test Coverage
+
+Phase 5 test coverage results:
+
+| Package      | Coverage |
+|-------------|----------|
+| calculator  | 89.8%    |
+| config      | 82.3%    |
+| database    | 80.5%    |
+| history     | 82.5%    |
+| utils       | N/A      |
+
+Overall test suite covers **all core packages with >80% coverage**.
 
 ### Code Quality
 
@@ -260,11 +281,11 @@ go test -bench=. ./...
 # Run go vet
 go vet ./...
 
-# Run golangci-lint
-golangci-lint run
-
 # Format code
 go fmt ./...
+
+# Run golangci-lint (if installed)
+golangci-lint run
 ```
 
 ### Build

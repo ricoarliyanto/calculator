@@ -18,17 +18,19 @@ type Config struct {
 	HistoryLimit   int    `yaml:"history-limit" json:"history_limit"`
 	AutoSave       bool   `yaml:"auto-save" json:"auto_save"`
 	ShowTimestamps bool   `yaml:"show-timestamps" json:"show_timestamps"`
+	Theme          string `yaml:"theme" json:"theme"`
 }
 
 // DefaultConfig returns a new configuration with default values
 func DefaultConfig() *Config {
 	return &Config{
-		Mode:          "standard",
-		AngleUnit:     "rad",
-		DecimalPlaces: 10,
-		HistoryLimit:  1000,
-		AutoSave:      true,
+		Mode:           "standard",
+		AngleUnit:      "rad",
+		DecimalPlaces:  10,
+		HistoryLimit:   1000,
+		AutoSave:       true,
 		ShowTimestamps: true,
+		Theme:          "light",
 	}
 }
 
@@ -180,6 +182,24 @@ func (cm *ConfigManager) GetHistoryLimit() int {
 	return cm.config.HistoryLimit
 }
 
+// SetTheme sets the UI theme
+func (cm *ConfigManager) SetTheme(theme string) error {
+	if theme != "light" && theme != "dark" {
+		return fmt.Errorf("invalid theme: %s (must be 'light' or 'dark')", theme)
+	}
+	cm.mu.Lock()
+	defer cm.mu.Unlock()
+	cm.config.Theme = theme
+	return nil
+}
+
+// GetTheme returns the UI theme
+func (cm *ConfigManager) GetTheme() string {
+	cm.mu.RLock()
+	defer cm.mu.RUnlock()
+	return cm.config.Theme
+}
+
 // SetAutoSave sets whether to auto-save history
 func (cm *ConfigManager) SetAutoSave(autoSave bool) {
 	cm.mu.Lock()
@@ -231,6 +251,10 @@ func (cm *ConfigManager) Validate() error {
 		return fmt.Errorf("invalid history limit: %d", config.HistoryLimit)
 	}
 
+	if config.Theme != "light" && config.Theme != "dark" {
+		return fmt.Errorf("invalid theme: %s", config.Theme)
+	}
+
 	return nil
 }
 
@@ -273,6 +297,7 @@ func (cm *ConfigManager) ExportConfig() map[string]interface{} {
 		"history_limit":   cm.config.HistoryLimit,
 		"auto_save":       cm.config.AutoSave,
 		"show_timestamps": cm.config.ShowTimestamps,
+		"theme":           cm.config.Theme,
 	}
 }
 
@@ -305,12 +330,23 @@ func (cm *ConfigManager) ImportConfig(data map[string]interface{}) error {
 		cm.config.ShowTimestamps = showTimestamps
 	}
 
+	if theme, ok := data["theme"].(string); ok {
+		cm.config.Theme = theme
+	}
+
 	return nil
 }
 
 // Reload reloads the configuration from disk
 func (cm *ConfigManager) Reload() error {
 	return cm.Load()
+}
+
+// Reset resets the configuration to default values
+func (cm *ConfigManager) Reset() {
+	cm.mu.Lock()
+	defer cm.mu.Unlock()
+	cm.config = DefaultConfig()
 }
 
 // GetDataDir returns the directory containing the config file

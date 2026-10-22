@@ -4,8 +4,8 @@
 *.dll
 *.so
 *.dylib
-calculator
-calculator.exe
+/calculator
+/calculator.exe
 
 # Test binary, built with `go test -c`
 *.test
